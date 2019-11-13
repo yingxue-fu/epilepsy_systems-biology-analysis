@@ -1,77 +1,191 @@
-library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(pheatmap)
+library(RColorBrewer)
+
+# ADME analysis for GBL compounds
+GBL_adme <- read.csv(file = "10 mechanism analysis for Gin_B/GBL_ADME.csv")
+GBL_adme$Compound_class <- factor(GBL_adme$Compound_class, levels = c("TTLs", "Flavonoids","Flavonoid oligomers","Carboxylic acids"))
 
 
-# M10 regulators
-load("06 master regulator identification/mrs_all_anno.RData")
+gbl_mw <- ggplot(GBL_adme, aes(x=Compound_class, y=MW, color =Compound_class, fill=Compound_class)) +
+  geom_violin(alpha=0.7) + 
+  geom_dotplot(binaxis='y', stackdir='center', binwidth = 8, dotsize = 1.5, position=position_dodge(1), color="black") + 
+  theme_bw() + 
+  theme(legend.position="none") +
+  scale_fill_manual(values = c("#7189BF", "#df7599", "#ffc785","#72d6c9")) +
+  scale_color_manual(values = c("#7189BF", "#df7599", "#ffc785","#72d6c9")) +
+  theme(axis.text.x = element_blank()) +
+  geom_hline(yintercept=500, linetype="dashed", color = "red",alpha=0.5)
 
-M10_regulators = mrs_alld_anno %>% filter(Modules == "M10")
-write.csv(M10_regulators, "10 mechanism analysis for Gin_B/M10_regulators.csv")
+gbl_hbd <- ggplot(GBL_adme, aes(x=Compound_class, y=HBD, color =Compound_class, fill=Compound_class)) +
+  geom_violin(alpha=0.7) + 
+  geom_dotplot(binaxis='y', stackdir='center', binwidth = 0.18, dotsize = 1.5, position=position_dodge(1), color="black") + 
+  theme_bw() + 
+  theme(legend.position="none") +
+  scale_fill_manual(values = c("#7189BF", "#df7599", "#ffc785","#72d6c9")) +
+  scale_color_manual(values = c("#7189BF", "#df7599", "#ffc785","#72d6c9")) +
+  theme(axis.text.x = element_blank()) +
+  scale_y_continuous(limits = c(2,13)) +
+  geom_hline(yintercept=5, linetype="dashed", color = "red",alpha=0.5)
 
-# M10 genes
-load("04 differential expression analysis/DEresults.RData")
+gbl_hba <- ggplot(GBL_adme, aes(x=Compound_class, y=HBA, color =Compound_class, fill=Compound_class)) +
+  geom_violin(alpha=0.7) + 
+  geom_dotplot(binaxis='y', stackdir='center', binwidth = 0.2, dotsize = 1.5, position=position_dodge(1), color="black") + 
+  theme_bw() + 
+  theme(legend.position="none") +
+  scale_fill_manual(values = c("#7189BF", "#df7599", "#ffc785","#72d6c9")) +
+  scale_color_manual(values = c("#7189BF", "#df7599", "#ffc785","#72d6c9")) +
+  theme(axis.text.x = element_blank())+
+  geom_hline(yintercept=10, linetype="dashed", color = "red",alpha=0.5)
 
-M10_genes = DE_alld_anno %>% filter(Modules == "M10")
+gbl_alogp <- ggplot(GBL_adme, aes(x=Compound_class, y=AlogP, color =Compound_class, fill=Compound_class)) +
+  geom_violin(alpha=0.7) + 
+  geom_dotplot(binaxis='y', stackdir='center', binwidth = 0.18, dotsize = 1.5, position=position_dodge(1), color="black") + 
+  theme_bw() + 
+  theme(legend.position="none") +
+  scale_fill_manual(values = c("#7189BF", "#df7599", "#ffc785","#72d6c9")) +
+  scale_color_manual(values = c("#7189BF", "#df7599", "#ffc785","#72d6c9")) +
+  theme(axis.text.x = element_blank()) +
+  geom_hline(yintercept=5, linetype="dashed", color = "red",alpha=0.5)
 
-# subgraph of GB targets and M10 regulators and AED targets and epilepsy genes
-GB_mech = c(GBL_compound_target_list$Ginkgolide_B, kregulator_interome_list$M10)
+gbl_logs <- ggplot(GBL_adme, aes(x=Compound_class, y=logS, color =Compound_class, fill=Compound_class)) +
+  geom_violin(alpha=0.7) + 
+  geom_dotplot(binaxis='y', stackdir='center', binwidth = 0.1, dotsize = 1.5, position=position_dodge(1), color="black") + 
+  theme_bw() + 
+  theme(legend.position="none") +
+  scale_fill_manual(values = c("#7189BF", "#df7599", "#ffc785","#72d6c9")) +
+  scale_color_manual(values = c("#7189BF", "#df7599", "#ffc785","#72d6c9")) +
+  theme(axis.text.x = element_blank()) +
+  scale_y_continuous(limits = c(-4,1)) +
+  geom_hline(yintercept=-4, linetype="dashed", color = "red",alpha=0.5)
+
+gbl_ppb <- ggplot(GBL_adme, aes(x=Compound_class, y=PPB, color =Compound_class, fill=Compound_class)) +
+  geom_violin(alpha=0.7) + 
+  geom_dotplot(binaxis='y', stackdir='center', binwidth = 0.021, dotsize = 1.5, position=position_dodge(1), color="black") + 
+  theme_bw() + 
+  theme(legend.position="none") +
+  scale_fill_manual(values = c("#7189BF", "#df7599", "#ffc785","#72d6c9")) +
+  scale_color_manual(values = c("#7189BF", "#df7599", "#ffc785","#72d6c9")) +
+  theme(axis.text.x = element_blank()) +
+  geom_hline(yintercept=0.9, linetype="dashed", color = "red",alpha=0.5)
+
+library(ggpubr)
+ggarrange(gbl_mw, gbl_hbd, gbl_hba, gbl_alogp, gbl_logs, gbl_ppb, labels = c("A", "B", "C","D", "E", "F"), ncol = 3, nrow = 2, align = "v")
+
+save.image(file = "10 mechanism analysis for Gin_B/GBL_adme.RData")
+
+# legend
+ggplot(GBL_adme, aes(x=Compound_class, y=PPB, color =Compound_class, fill=Compound_class)) +
+  geom_violin(alpha=0.7) + 
+  geom_dotplot(binaxis='y', stackdir='center', binwidth = 0.021, dotsize = 1.5, position=position_dodge(1), color="black") + 
+  theme_bw() + 
+  scale_fill_manual(values = c("#7189BF", "#df7599", "#ffc785","#72d6c9")) +
+  scale_color_manual(values = c("#7189BF", "#df7599", "#ffc785","#72d6c9")) +
+  theme(axis.text.x = element_blank()) +
+  geom_hline(yintercept=0.9, linetype="dashed", color = "red",alpha=0.5)
+
+# M1 regulators
+load("08 human interactome/kregulator_interome.RData")
+load("08 human interactome/GBL_compound_target.RData")
+load("08 human interactome/human_interactome.RData")
+
+M1_regulators = kregulator_interome %>% filter(Modules == "M1")
+write.csv(M1_regulators, file = "10 mechanism analysis for Gin_B/M1_regulators.csv")
+
+# subgraph of GB targets and M10 regulators
+GB_mech = c(GBL_compound_target_list$Ginkgolide_B, kregulator_interome_list$M1)
 
 a = human_interactome$Gene_A_Entrez_ID %in% GB_mech
 b = human_interactome$GeneB_Entrez_ID %in% GB_mech
 
-M10network0 = human_interactome[a|b, ]
+M1_PPI_network = human_interactome[a&b,]
 
-x = M10network0$Gene_A_Entrez_ID %in% c(probe_modules_anno_m2h$NCBI.gene.ID.1, 5724)
-y = M10network0$GeneB_Entrez_ID %in% c(probe_modules_anno_m2h$NCBI.gene.ID.1, 5724)
+write.csv(M1_PPI_network, file = "10 mechanism analysis for Gin_B/M1_PPI_network.csv")
 
-M10network = M10network0[x&y, ]
+# ARR3
+a = human_interactome$Gene_A_Entrez_ID == "407"
+b = human_interactome$GeneB_Entrez_ID == "407"
 
-M10_igraph <- graph_from_data_frame(M10network, directed = FALSE)
-summary(M10_igraph)
+ARR3_network = human_interactome[a|b,]
+ARR3_network_node <- c(ARR3_network$Gene_A_Entrez_ID,ARR3_network$GeneB_Entrez_ID) %>% unique() %>% as.character()
 
-M10_degree = degree(M10_igraph, v = V(M10_igraph), loops = F, normalized = FALSE)
-M10_gene_anno = probe_modules_anno_m2h[match(names(M10_degree), as.character(probe_modules_anno_m2h$NCBI.gene.ID.1)), ]
-M10_gene_anno$degree = M10_degree
+load("06 inferring protein activity_b/human_maRt.RData")
+ARR3_network_GENE <- getBM(attributes = c("entrezgene_id", "hgnc_symbol"), 
+                           filters = "entrezgene_id",
+                           values = ARR3_network_node, 
+                           mart = human_maRt)
 
-degree1 = read.csv("10 mechanism analysis for Gin_B/degree1.csv", header = F)
+GB_mech_arr3 = c(GB_mech, ARR3_network_node) %>% unique()
 
-s = M10network$Gene_A_Entrez_ID %in% degree1$V1
-t = M10network$GeneB_Entrez_ID %in% degree1$V1
+a = human_interactome$Gene_A_Entrez_ID %in% GB_mech_arr3
+b = human_interactome$GeneB_Entrez_ID %in% GB_mech_arr3
 
-M10network_nod1 = M10network[!(s|t), ]
-M10network_nod1$geneAsymbol = probe_modules_anno_m2h$HGNC.symbol[match(M10network_nod1$Gene_A_Entrez_ID, probe_modules_anno_m2h$NCBI.gene.ID.1)]
-M10network_nod1$geneBsymbol = probe_modules_anno_m2h$HGNC.symbol[match(M10network_nod1$GeneB_Entrez_ID, probe_modules_anno_m2h$NCBI.gene.ID.1)]
+M1_PPI_network_1 = human_interactome[a&b,]
 
-write.csv(M10network_nod1, file = "10 mechanism analysis for Gin_B/M10network_nod1.csv")
-
-
-# DE regulators and their targets
-DEregulator_targets = subset.data.frame(acance_network, acance_network$Regulator %in% DEregulator_probe_anno$probe_ID)
-
-save(DEregulator_targets, file = "06 master regulator identification/DEregulator_targets.RData")
-
-# ARR3 ILMN_2717844
-arr3_targets = subset.data.frame(DEregulator_targets, Regulator == "ILMN_2717844")
-arr3_targets_info = merge(arr3_targets, DEG1, by.x = "Target", by.y = "probe_ID")
-arr3_targets_info = merge(arr3_targets_info, probe_modules_anno, by.x = "Target", by.y = "probe_ID")
-
-# GLRA2 ILMN_2729364
-glra2_targets = subset.data.frame(DEregulator_targets, Regulator == "ILMN_2729364")
-glra2_targets_info = merge(glra2_targets, DEG_info, by.x = "Target", by.y = "probe_ID")
+write.csv(M1_PPI_network_1, file = "10 mechanism analysis for Gin_B/M1_PPI_network_1.csv")
 
 
-# M13 pathway gene
-M13_pathway_gene = read.csv("10 mechanism analysis for Gin_B/M13_pathway_gene.csv")
-M13_pathway_gene_anno = merge(M13_pathway_gene, DEregulator_probe_anno, by.x = "Gene", by.y = "Gene_symbol")
+M1_PPI_network_node <- read.csv(file = "10 mechanism analysis for Gin_B/M1_PPI_network_node.csv")
+
+M1R_avtivity <- DEregulators_m2h[match(M1_PPI_network_node$name, DEregulators_m2h$HGNC.symbol),]
+write.csv(M1R_avtivity, file = "10 mechanism analysis for Gin_B/M1R_avtivity.csv")
+
+M1R_avtivity_reorder <- read.csv("10 mechanism analysis for Gin_B/M1R_avtivity_reorder.csv")
+
+library(pheatmap)
+library(RColorBrewer)
+# creat matrix
+M1R_matrix = as.matrix(M1R_avtivity_reorder[,2:4])
+rownames(M1R_matrix) <- M1R_avtivity_reorder$HGNC.symbol
+
+# generate annotations
+annotation_row = data.frame(Type = factor(M1R_avtivity_reorder$type))
+rownames(annotation_row) = M1R_avtivity_reorder$HGNC.symbol
+# specify colors
+ann_colors = list(Type = c(SP = "#C7F0DB", Signal = "#8BBABB", TF = "#6C7B95"))
 
 
-# pcr gene primers
-pcr_genes = read.table("04 differential expression analysis/PCR_gene_primer.txt", col.names = "Gene_symbol")
-load("03 brain cell type enrichment/human_mouse_biomaRt.RData")
-pcr_genes_h2m = getLDS(attributes = c("entrezgene", "hgnc_symbol"), 
-                       filters = "hgnc_symbol", 
-                       values = pcr_genes$Gene_symbol, 
-                       mart = human, 
-                       attributesL = c("entrezgene", "mgi_symbol"), 
-                       martL = mouse) %>% na.omit()
-pcr_genes_anno = merge(pcr_genes_h2m, probe_modules_anno, by.x = "NCBI.gene.ID.1", by.y = "Gene_ID")
-write.csv(pcr_genes_anno, file = "04 differential expression analysis/pcr_genes_anno.csv")
+pheatmap(M1R_matrix, 
+         color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdBu")))(100),
+         annotation_row = annotation_row,
+         annotation_colors = ann_colors, 
+         treeheight_col = 10,
+         treeheight_row = 15,
+         show_rownames = T,
+         show_colnames = T,
+         fontsize = 8,
+         fontsize_col = 6,
+         cluster_rows = F,
+         cluster_cols = F,
+         angle_col = 45) 
+
+
+
+
+
+
+
+
+
+other_node1 = human_interactome[a, 2]
+other_node2 = human_interactome[b, 1]
+
+M10network_node = unique(c(as.character(intersect(other_node1, other_node2)), GB_mech))
+
+x = human_interactome$Gene_A_Entrez_ID %in% M10network_node
+y = human_interactome$GeneB_Entrez_ID %in% M10network_node
+
+M10network = rbind(human_interactome[a&y, ], human_interactome[b&x, ]) %>% unique()
+
+write.csv(M10network, file = "10 mechanism analysis for Gin_B/M10_PPInetwork.csv")
+
+library(biomaRt)
+load("05 conservation in human/human_mouse_biomaRt.RData")
+M10network_node_anno = getBM(attributes = c("entrezgene", "hgnc_symbol"), 
+                             filters = "entrezgene", 
+                             values = M10network_node, 
+                             mart = human)
+
+
+
