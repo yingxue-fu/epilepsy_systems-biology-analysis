@@ -1,52 +1,25 @@
 library(matrixStats)
 library(tidyverse)
 
+load("06_07 mouse to human/DEregulators_m2h.RData")
+load("08 human interactome/protein_degree.RData")
+load("08 human interactome/proteins_distance.RData")
+load("08 human interactome/kregulator_interome.RData")
+load("08 human interactome/AED_targets.RData")
+load("08 human interactome/epilp_genes.RData")
+load("08 human interactome/GBL_compound_target.RData")
 
-load("06 master regulator identification/DEregulator_probe_anno.RData")
-load("07 human interactome/protein_degree.RData")
-load("07 human interactome/proteins_distance.RData")
-load("07 human interactome/kregulator_interome.RData")
-load("07 human interactome/AED_targets.RData")
-load("08 drug target interactions/GBL_compound_target.RData")
-
-
-# GBL compounds vs. epilepsy (all key regulators)
-GBLs_epilepsy = matrix(data = NA, nrow = length(GBL_compound_target_list), ncol = 1)
+# GBL compounds vs. kregulators_all
+GBLs_kregulators_all = matrix(data = NA, nrow = length(GBL_compound_target_list), ncol = 1)
 for (i in 1:length(GBL_compound_target_list)){
-  GBLs_epilepsy[i] = Zscor(GBL_compound_target_list[[i]], as.character(kregulator_interome$NCBI.gene.ID.1), protein_distance)
-  print(i)
+    GBLs_kregulators_all[i, 1] = Zscor(GBL_compound_target_list[[i]], kregulator_interome$NCBI.gene.ID.1, protein_distance)
+    print(i)
 }
-GBLs_epilepsy_df = data.frame(Compound = names(GBL_compound_target_list), 
-                              Z_score = GBLs_epilepsy)
-# GBC class
-GBC_class = read.csv("09 network proximity calculation/GBC_class.csv")
-GBLs_epilepsy_df = merge(GBLs_epilepsy_df, GBC_class, by = "Compound")
-
-# AEDs vs. epilepsy (all key regulators)
-AEDs_epilepsy = matrix(data = NA, nrow = length(AED_target_net_list), ncol = 1)
-for (i in 1:length(AED_target_net_list)){
-  AEDs_epilepsy[i] = Zscor(AED_target_net_list[[i]], as.character(kregulator_interome$NCBI.gene.ID.1), protein_distance)
-  print(i)
-}
-AEDs_epilepsy_df = data.frame(Compound = names(AED_target_net_list), 
-                              Z.score = AEDs_epilepsy) %>% na.omit()
-AEDs_epilepsy_df$Class = "AEDs"
-GBL_AED_epilepsy = rbind(GBLs_epilepsy_df, AEDs_epilepsy_df)
-
-ggplot(GBL_AED_epilepsy, aes(x=Class, y=Z.score, fill=Class)) +
-  geom_boxplot(alpha=0.2) + 
-  geom_dotplot(binaxis='y', stackdir='center', binwidth = 0.2, dotsize = 0.5, position=position_dodge(1), color="gray", fill = "gray", alpha = 0.7) + 
-  scale_x_discrete(limits=c("AEDs", "Carboxylic acids", "Flavonoids", "TTLs")) +
-  theme_classic() + 
-  theme(legend.position="none") +
-  coord_flip()
-
-
-#  theme(axis.text.x = element_text(face="bold", size=10, angle=30, hjust = 0.6, vjust = 0.8))
-save(GBLs_epilepsy_df, AEDs_epilepsy_df, GBL_AED_epilepsy, file = "09 network proximity calculation/compound_epilepsy_Zscor.RData")
+rownames(GBLs_kregulators_all) = names(GBL_compound_target_list)
 
 # GBL compounds vs. modules
-kregulator_interome_list$M14 = NULL
+kregulator_interome_list$M11 = NULL
+kregulator_interome_list$M4 = NULL
 GBLs_modules = matrix(data = NA, nrow = length(GBL_compound_target_list), ncol = length(kregulator_interome_list))
 for (i in 1:length(GBL_compound_target_list)){
   for (j in 1:length(kregulator_interome_list)){
@@ -56,18 +29,81 @@ for (i in 1:length(GBL_compound_target_list)){
 }
 rownames(GBLs_modules) = names(GBL_compound_target_list)
 colnames(GBLs_modules) = names(kregulator_interome_list)
+
+save(GBLs_modules, file = "09 network proximity/GBLs_modules.RData")
+
 write.csv(GBLs_modules, file = "09 network proximity calculation/GBLs_modules.csv")
 
-GBLs_modules_sub = GBLs_modules[, c("M2", "M3", "M6", "M7", "M10")]
-GBLs_modules_sub[GBLs_modules_sub>0] <- NA
+GBLs_modules_sub = GBLs_modules[, c("M1", "M3", "M6", "M7", "M8")]
+# GBLs_modules_sub[GBLs_modules_sub>0] <- NA
 
 GBLs_modules_df = as.data.frame(GBLs_modules_sub)
 GBLs_modules_df$Compound = rownames(GBLs_modules_sub)
 
-GBLs_modules_tbl = GBLs_modules_df %>% gather(`M2`, `M3`, `M6`, `M7`, `M10`, key = "Modules", value = "Z_score") %>% na.omit()
+GBLs_modules_tbl = GBLs_modules_df %>% gather(`M1`, `M3`, `M6`, `M7`, `M8`, key = "Modules", value = "Z_score") 
+
+# GBC class
+GBLs_class = read.csv("09 network proximity/GBC_class.csv")
+GBLs_modules_tbl = merge(GBLs_modules_tbl, GBLs_class, by = "Compound")
+
+# GBL compounds vs. epilepsy genes
+GBLs_epilepsy_genes = matrix(data = NA, nrow = length(GBL_compound_target_list), ncol = 1)
+for (i in 1:length(GBL_compound_target_list)){
+  GBLs_epilepsy_genes[i, 1] = Zscor(GBL_compound_target_list[[i]], epilp_genes_interome$entrezgene, protein_distance)
+  print(i)
+}
+rownames(GBLs_epilepsy_genes) = names(GBL_compound_target_list)
+
+
+GBLs_epilepsy_genes <- as.data.frame(GBLs_epilepsy_genes)
+GBLs_epilepsy_genes$Modules <- "EpilGene"
+GBLs_epilepsy_genes$Compound <- rownames(GBLs_epilepsy_genes)
+GBLs_epilepsy_genes = merge(GBLs_epilepsy_genes, GBLs_class, by = "Compound")
+GBLs_epilepsy_genes <- GBLs_epilepsy_genes[,c(1,3,2,4)]
+colnames(GBLs_epilepsy_genes)[3] <- "Z_score"
+
+GBLs_modules_tbl <- rbind(GBLs_modules_tbl, GBLs_epilepsy_genes)
+
+GBLs_modules_tbl$Class <- factor(GBLs_modules_tbl$Class, levels = c("TTLs", "Flavonoids","flavonoid oligomers","Carboxylic acids"))
+
+save(GBLs_modules_tbl, file = "10 mechanism analysis for Gin_B/GBLs_modules_tbl.RData")
+
+ggplot(GBLs_modules_tbl, aes(x=Modules, y=Z_score, color=Class, fill=Class)) +
+  geom_boxplot(alpha=0.3) + 
+  geom_dotplot(binaxis='y', stackdir='center', binwidth = 0.2, dotsize = 0.3, position=position_dodge(0.75), color="dimgray", alpha = 0.9) + 
+  theme_classic() + 
+  scale_x_discrete(limits=c("M1","M3", "M6", "M7", "M8", "EpilGene")) +
+ # coord_flip() +
+  geom_hline(yintercept = -0.15, linetype="dashed", size = 0.5, color = "black",alpha=0.6)
+
+# GBL compounds vs. AED targets
+GBLs_AED_targets = matrix(data = NA, nrow = length(GBL_compound_target_list), ncol = 1)
+for (i in 1:length(GBL_compound_target_list)){
+  GBLs_AED_targets[i, 1] = Zscor(GBL_compound_target_list[[i]], AED_targets_interome$ENTREZID, protein_distance)
+  print(i)
+}
+rownames(GBLs_AED_targets) = names(GBL_compound_target_list)
+
+GBLs_AED_targets_df <- as.data.frame(GBLs_AED_targets)
+GBLs_AED_targets_df$Compound <- rownames(GBLs_AED_targets)
+GBLs_AED_targets_df = merge(GBLs_AED_targets_df, GBLs_class, by = "Compound")
+GBLs_AED_targets_df$Class <- factor(GBLs_AED_targets_df$Class, levels = c("Carboxylic acids","flavonoid oligomers", "Flavonoids","TTLs"))
+
+ggplot(GBLs_AED_targets_df, aes(x=Class, y=V1, color=Class, fill=Class)) +
+  geom_boxplot(alpha=0.3) + 
+  geom_dotplot(binaxis='y', stackdir='center', binwidth = 0.4, dotsize = 1, position=position_dodge(0.75), color="dimgray", alpha = 0.9) + 
+  theme_classic() + 
+  coord_flip() +
+  geom_hline(yintercept = -0.15, linetype="dashed", size = 0.5, color = "black",alpha=0.6)
+
+
+
+save(GBLs_AED_targets, file = "09 network proximity/GBLs_AED_targets.RData")
+
 
 # AEDs vs. modules
 AEDs_modules = matrix(data = NA, nrow = length(AED_target_net_list), ncol = length(kregulator_interome_list))
+
 for (i in 1:length(AED_target_net_list)){
   for (j in 1:length(kregulator_interome_list)){
     AEDs_modules[i, j] = Zscor(AED_target_net_list[[i]], kregulator_interome_list[[j]], protein_distance)
@@ -77,14 +113,29 @@ for (i in 1:length(AED_target_net_list)){
 rownames(AEDs_modules) = names(AED_target_net_list)
 colnames(AEDs_modules) = names(kregulator_interome_list)
 
+save(AEDs_modules, file = "09 network proximity/AEDs_modules.RData")
 
-AEDs_modules_sub = AEDs_modules[, c("M2", "M3", "M6", "M7", "M10")]
-AEDs_modules_sub[AEDs_modules_sub>0] <- NA
+AEDs_modules_df = as.data.frame(AEDs_modules)
+AEDs_modules_df$Compound = rownames(AEDs_modules)
 
-AEDs_modules_df = as.data.frame(AEDs_modules_sub)
-AEDs_modules_df$Compound = rownames(AEDs_modules_sub)
+AEDs_modules_tbl = AEDs_modules_df %>% gather(`M1`, `M3`, `M6`, `M7`, `M8`, key = "Modules", value = "Z_score") %>% na.omit()
 
-AEDs_modules_tbl = AEDs_modules_df %>% gather(`M2`, `M3`, `M6`, `M7`, `M10`, key = "Modules", value = "Z_score") %>% na.omit()
+ggplot(AEDs_modules_tbl, aes(x=Modules, y=Z_score)) +
+  geom_boxplot(alpha=0.2, color="#64b2cd", fill="#64b2cd") + 
+  geom_dotplot(binaxis='y', stackdir='center', binwidth = 0.16, position=position_dodge(0.9), dotsize = 0.8,color="gray", fill="#64b2cd") + 
+  theme_classic() + 
+  scale_x_discrete(limits=c("M1","M3", "M6", "M7", "M8")) +
+  geom_hline(yintercept = -0.15, linetype="dashed", size = 0.5, color = "black",alpha=0.6)
+
+# AEDs vs. epilepsy genes
+AEDs_epilepsy_genes = matrix(data = NA, nrow = length(AED_target_net_list), ncol = 1)
+for (i in 1:length(AED_target_net_list)){
+  AEDs_epilepsy_genes[i, 1] = Zscor(AED_target_net_list[[i]], epilp_genes_interome$entrezgene, protein_distance)
+  print(i)
+}
+rownames(AEDs_epilepsy_genes) = names(AED_target_net_list)
+
+
 
 save(GBLs_modules, GBLs_modules_tbl, AEDs_modules, AEDs_modules_tbl, file = "09 network proximity calculation/compound_module_Zscore.RData")
 
@@ -101,6 +152,19 @@ ggplot(GBL_AED_modules, aes(x=Modules, y=Z_score, color=Compd_type, fill=Compd_t
   scale_x_discrete(limits=c("M2","M3", "M6", "M7", "M10"))
 
 
+# boxplot
+
+
+ggplot(GBL_AED_epilepsy, aes(x=Class, y=Z.score, color=Class, fill=Class)) +
+  geom_boxplot(alpha=0.2) + 
+  geom_dotplot(binaxis='y', stackdir='center', binwidth = 0.2, dotsize = 0.5, position=position_dodge(1), color="black", fill = "gray", alpha = 0.7) + 
+  scale_x_discrete(limits=c("AEDs", "Carboxylic acids", "flavonoid oligomers", "Flavonoids", "TTLs")) +
+  theme_classic() + 
+  theme(legend.position="none") +
+  coord_flip()
+
+
+#  theme(axis.text.x = element_text(face="bold", size=10, angle=30, hjust = 0.6, vjust = 0.8))
 
 # heatmap
 GBLs_modules_sub0 = GBLs_modules[, c("M2", "M3", "M6", "M7", "M10")]
